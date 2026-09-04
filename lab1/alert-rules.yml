@@ -1,0 +1,29 @@
+groups:
+  - name: lab1-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: (sum(rate(number_of_error_total[1m])) / sum(rate(number_of_requests_total[1m]))) * 100 > 20
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "high error rate"
+          description: "error rate is > 20% for the last 30s"
+
+      - alert: HighRequestRate
+        expr: sum(rate(number_of_requests_total[1m])) > 2
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "traffic increase"
+          description: "RPS is > 2 for the last 30s"
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(request_duration_seconds_bucket[1m])) by (le)) > 1
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "high p95 latency"
+          description: "p95 latency is > 1s for the last 30s"
