@@ -1,0 +1,111 @@
+services:
+  picker-service:
+    build: ./pickerService/.
+    ports:
+      - "8081:8080"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC=orders
+      - KAFKA_GROUP_ID=picker-group
+      - INSTANCE_NAME=picker-1
+
+  user-service:
+    build: ./userService/.
+    ports:
+      - "8082:8080"
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC=orders
+
+  # picker-service-2:
+  #   build: ./pickerService/.
+  #   ports:
+  #     - "8083:8080"
+  #   environment:
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  #     - KAFKA_TOPIC=orders
+  #     - KAFKA_GROUP_ID=picker-group
+  #     - INSTANCE_NAME=picker-2
+  #
+  # picker-service-3:
+  #   build: ./pickerService/.
+  #   ports:
+  #     - "8084:8080"
+  #   environment:
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  #     - KAFKA_TOPIC=orders
+  #     - KAFKA_GROUP_ID=picker-group
+  #     - INSTANCE_NAME=picker-3
+  #
+  # picker-service-4:
+  #   build: ./pickerService/.
+  #   ports:
+  #     - "8085:8080"
+  #   environment:
+  #     - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  #     - KAFKA_TOPIC=orders
+  #     - KAFKA_GROUP_ID=picker-group
+  #     - INSTANCE_NAME=picker-4
+
+  kafka:
+    image: apache/kafka:3.7.1
+    volumes:
+      - ./monitoring/jmx_prometheus_javaagent.jar:/opt/jmx-exporter/jmx_prometheus_javaagent.jar
+      - ./monitoring/kafka-jmx-exporter.yml:/opt/jmx-exporter/kafka-jmx-exporter.yml
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_JVM_PERFORMANCE_OPTS=-javaagent:/opt/jmx-exporter/jmx_prometheus_javaagent.jar=7071:/opt/jmx-exporter/kafka-jmx-exporter.yml
+    ports:
+      - "9092:9092"
+      - "7071:7071"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    environment:
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_NAME=local
+    ports:
+      - "8080:8080"
+
+  kafka-init:
+    image: apache/kafka:3.7.1
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+        /opt/kafka/bin/kafka-topics.sh --create --if-not-exists \
+          --topic orders \
+          --bootstrap-server kafka:9092 \
+          --partitions 1 \
+          --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --alter \
+          --topic orders \
+          --bootstrap-server kafka:9092 \
+          --partitions 3
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - kafka
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus

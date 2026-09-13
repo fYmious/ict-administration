@@ -1,0 +1,28 @@
+lowercaseOutputName: true
+rules:
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=(.+)><>(Count|OneMinuteRate)"
+    name: "kafka_server_brokertopicmetrics_$1_$2"
+  - pattern: "kafka.server<type=BrokerTopicMetrics, name=(.+), topic=(.+)><>(Count|OneMinuteRate)"
+    name: "kafka_server_brokertopicmetrics_$1_$3"
+    labels:
+      topic: "$2"
+
+  - pattern: "kafka.server<type=ReplicaManager, name=(.+)><>Value"
+    name: "kafka_server_replicamanager_$1"
+
+  - pattern: "kafka.controller<type=KafkaController, name=(.+)><>Value"
+    name: "kafka_controller_kafkacontroller_$1"
+
+  - pattern: "kafka.server<type=(.+), name=(.+)><>Value"
+    name: "kafka_server_$1_$2"
+
+  - pattern: "kafka.log<type=Log, name=(.+), topic=(.+), partition=(.*)><>Value"
+    name: "kafka_log_$1"
+    labels:
+      topic: "$2"
+      partition: "$3"
+
+  - pattern: "kafka.server<type=DelayedOperationPurgatory, name=(.+), delayedOperation=(.+)><>Value"
+    name: "kafka_server_delayedoperationpurgatory_$1"
+    labels:
+      operation: "$2"
