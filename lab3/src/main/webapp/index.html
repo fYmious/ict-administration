@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MongoDB Replication Lab</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 20px;
+        background: #f4f6f8;
+        color: #20242a;
+      }
+      h1 {
+        margin-bottom: 8px;
+      }
+      .subtitle {
+        color: #59636e;
+        margin-bottom: 24px;
+      }
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      button {
+        border: 0;
+        border-radius: 7px;
+        padding: 11px 16px;
+        cursor: pointer;
+        background: #1769aa;
+        color: white;
+        font-size: 14px;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      .secondary {
+        background: #59636e;
+      }
+      .load {
+        background: #b45309;
+      }
+      #status {
+        padding: 12px;
+        background: white;
+        border-radius: 7px;
+        margin-bottom: 20px;
+        white-space: pre-wrap;
+      }
+      .note {
+        background: white;
+        padding: 14px;
+        border-radius: 7px;
+        margin-bottom: 10px;
+        overflow-wrap: anywhere;
+      }
+      .note small {
+        color: #59636e;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>MongoDB Replication</h1>
+    <p class="subtitle">writing through primary, reading through secondary.</p>
+
+    <div class="controls">
+      <button id="create">create note</button>
+      <button id="refresh" class="secondary">reload list</button>
+      <button id="load" class="load">high load (500 notes)</button>
+    </div>
+
+    <div id="status">ready for work.</div>
+    <h2>Notes</h2>
+    <div id="notes"></div>
+
+    <script>
+      const status = document.querySelector("#status");
+      const notes = document.querySelector("#notes");
+      const buttons = document.querySelectorAll("button");
+
+      async function request(url, options) {
+        const response = await fetch(url, options);
+        const body = await response.json();
+
+        if (!response.ok) {
+          throw new Error(body.message || `HTTP ${response.status}`);
+        }
+
+        return body;
+      }
+
+      async function refreshNotes() {
+        status.textContent = "reading from secondary...";
+        try {
+          const data = await request("api/notes");
+          notes.replaceChildren();
+
+          if (data.length === 0) {
+            notes.textContent = "no notes yet.";
+          }
+
+          for (const note of data) {
+            const item = document.createElement("div");
+            item.className = "note";
+
+            const text = document.createElement("div");
+            text.textContent = note.text ?? "(no text)";
+
+            const date = document.createElement("small");
+            date.textContent = note.createdAt
+              ? new Date(note.createdAt).toLocaleString()
+              : "";
+
+            item.append(text, date);
+            notes.append(item);
+          }
+
+          status.textContent = `got notes: ${data.length}. source: secondary.`;
+        } catch (error) {
+          status.textContent = `reading error: ${error.message}`;
+        }
+      }
+
+      async function createNote() {
+        status.textContent = "creating note on primary...";
+        try {
+          await request("api/notes", { method: "POST" });
+          status.textContent =
+            "note saved on primary. updating reading from secondary...";
+          await refreshNotes();
+        } catch (error) {
+          status.textContent = `writing exception: ${error.message}`;
+        }
+      }
+
+      async function loadNotes() {
+        status.textContent = "creating 500 notes on primary...";
+        try {
+          const result = await request("api/load", { method: "POST" });
+          status.textContent = `notes created: ${result.created}. now checking secondary.`;
+          await refreshNotes();
+        } catch (error) {
+          status.textContent = `error highload: ${error.message}`;
+        }
+      }
+
+      document.querySelector("#create").addEventListener("click", createNote);
+      document
+        .querySelector("#refresh")
+        .addEventListener("click", refreshNotes);
+      document.querySelector("#load").addEventListener("click", loadNotes);
+
+      refreshNotes();
+    </script>
+  </body>
+</html>
