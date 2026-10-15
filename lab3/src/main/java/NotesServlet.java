@@ -50,8 +50,8 @@ public class NotesServlet extends HttpServlet {
 
     readClient = MongoClients.create(readSettings);
 
-    MongoDatabase writeDb = writeClient.getDatabase("lab4");
-    MongoDatabase readDb = readClient.getDatabase("lab4");
+    MongoDatabase writeDb = writeClient.getDatabase("lab3");
+    MongoDatabase readDb = readClient.getDatabase("lab3");
 
     writeCollection = writeDb.getCollection("notes");
     readCollection = readDb.getCollection("notes");
