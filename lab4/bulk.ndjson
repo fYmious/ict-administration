@@ -1,0 +1,60 @@
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T08:00:00+00:00", "level": "INFO", "service": "api", "message": "Request to inventory service timed out", "trace_id": "trace-1000"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T08:07:00+00:00", "level": "INFO", "service": "auth", "message": "Access token refreshed", "trace_id": "trace-1001"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T08:14:00+00:00", "level": "ERROR", "service": "api", "message": "GET /api/products returned 200", "trace_id": "trace-1002"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T08:21:00+00:00", "level": "WARN", "service": "database", "message": "Database connection established", "trace_id": "trace-1003"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T08:28:00+00:00", "level": "ERROR", "service": "api", "message": "Failed to serialize response", "trace_id": "trace-1004"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T08:35:00+00:00", "level": "ERROR", "service": "auth", "message": "User login successful", "trace_id": "trace-1005"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T08:42:00+00:00", "level": "INFO", "service": "database", "message": "Query execution failed", "trace_id": "trace-1006"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T08:49:00+00:00", "level": "WARN", "service": "auth", "message": "Invalid password provided", "trace_id": "trace-1007"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T08:56:00+00:00", "level": "INFO", "service": "api", "message": "Failed to serialize response", "trace_id": "trace-1008"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T09:03:00+00:00", "level": "ERROR", "service": "api", "message": "Failed to serialize response", "trace_id": "trace-1009"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T09:10:00+00:00", "level": "INFO", "service": "auth", "message": "User login successful", "trace_id": "trace-1010"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T09:17:00+00:00", "level": "WARN", "service": "api", "message": "GET /api/products returned 200", "trace_id": "trace-1011"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T09:24:00+00:00", "level": "INFO", "service": "payments", "message": "Payment transaction failed", "trace_id": "trace-1012"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T09:31:00+00:00", "level": "WARN", "service": "api", "message": "GET /api/products returned 200", "trace_id": "trace-1013"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T09:38:00+00:00", "level": "INFO", "service": "orders", "message": "Failed to reserve inventory", "trace_id": "trace-1014"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T09:45:00+00:00", "level": "ERROR", "service": "payments", "message": "Payment transaction failed", "trace_id": "trace-1015"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T09:52:00+00:00", "level": "INFO", "service": "api", "message": "Request processing completed", "trace_id": "trace-1016"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T09:59:00+00:00", "level": "INFO", "service": "payments", "message": "Payment gateway response delayed", "trace_id": "trace-1017"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T10:06:00+00:00", "level": "WARN", "service": "api", "message": "Request to inventory service timed out", "trace_id": "trace-1018"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T10:13:00+00:00", "level": "INFO", "service": "orders", "message": "Order status updated", "trace_id": "trace-1019"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T10:20:00+00:00", "level": "INFO", "service": "payments", "message": "Payment gateway response delayed", "trace_id": "trace-1020"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T10:27:00+00:00", "level": "ERROR", "service": "auth", "message": "Authentication service unavailable", "trace_id": "trace-1021"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T10:34:00+00:00", "level": "INFO", "service": "database", "message": "Query executed successfully", "trace_id": "trace-1022"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T10:41:00+00:00", "level": "WARN", "service": "orders", "message": "Failed to reserve inventory", "trace_id": "trace-1023"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T10:48:00+00:00", "level": "INFO", "service": "database", "message": "Database connection pool exhausted", "trace_id": "trace-1024"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T10:55:00+00:00", "level": "INFO", "service": "api", "message": "GET /api/products returned 200", "trace_id": "trace-1025"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T11:02:00+00:00", "level": "WARN", "service": "payments", "message": "Payment transaction failed", "trace_id": "trace-1026"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T11:09:00+00:00", "level": "ERROR", "service": "database", "message": "Database connection pool exhausted", "trace_id": "trace-1027"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T11:16:00+00:00", "level": "WARN", "service": "auth", "message": "Authentication service unavailable", "trace_id": "trace-1028"}
+{"index": {"_index": "app-logs"}}
+{"timestamp": "2026-10-15T11:23:00+00:00", "level": "INFO", "service": "orders", "message": "Failed to reserve inventory", "trace_id": "trace-1029"}
