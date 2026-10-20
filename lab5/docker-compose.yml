@@ -1,0 +1,193 @@
+name: lab5
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://keycloak.local:8080
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-lab.json:/opt/keycloak/data/import/realm-lab.json:ro
+    networks:
+      default:
+        aliases:
+          - keycloak.local
+    restart: unless-stopped
+
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    shm_size: 256m
+    ports:
+      - "2222:22"
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://gitlab.local'
+        gitlab_rails['initial_root_password'] = 'Admin12345!Lab'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = false
+        nginx['proxy_set_headers'] = {
+          "Host" => "$$http_host_with_default",
+          "X-Real-IP" => "$$remote_addr",
+          "X-Forwarded-For" => "$$proxy_add_x_forwarded_for",
+          "X-Forwarded-Proto" => "https",
+          "X-Forwarded-Ssl" => "on",
+          "Upgrade" => "$$http_upgrade",
+          "Connection" => "$$connection_upgrade"
+        }
+
+        registry_external_url 'https://registry.gitlab.local'
+        registry_nginx['listen_port'] = 5050
+        registry_nginx['listen_https'] = false
+        registry_nginx['proxy_set_headers'] = {
+          "Host" => "$$http_host",
+          "X-Real-IP" => "$$remote_addr",
+          "X-Forwarded-For" => "$$proxy_add_x_forwarded_for",
+          "X-Forwarded-Proto" => "https",
+          "X-Forwarded-Ssl" => "on"
+        }
+
+        puma['worker_processes'] = 0
+        sidekiq['concurrency'] = 10
+
+        gitlab_rails['omniauth_enabled'] = true
+        gitlab_rails['omniauth_allow_single_sign_on'] = ['openid_connect']
+        gitlab_rails['omniauth_block_auto_created_users'] = false
+        gitlab_rails['omniauth_providers'] = [
+          {
+            name: 'openid_connect',
+            label: 'Keycloak',
+            args: {
+              name: 'openid_connect',
+              scope: ['openid', 'profile', 'email'],
+              response_type: 'code',
+              issuer: 'http://keycloak.local:8080/realms/devplatform',
+              discovery: false,
+              client_auth_method: 'query',
+              uid_field: 'preferred_username',
+              pkce: true,
+              client_options: {
+                identifier: 'gitlab',
+                secret: 'gitlab-secret-123',
+                redirect_uri: 'https://gitlab.local/users/auth/openid_connect/callback',
+                scheme: 'http',
+                host: 'keycloak.local',
+                port: 8080,
+                authorization_endpoint: 'http://keycloak.local:8080/realms/devplatform/protocol/openid-connect/auth',
+                token_endpoint: 'http://keycloak.local:8080/realms/devplatform/protocol/openid-connect/token',
+                userinfo_endpoint: 'http://keycloak.local:8080/realms/devplatform/protocol/openid-connect/userinfo',
+                jwks_uri: 'http://keycloak.local:8080/realms/devplatform/protocol/openid-connect/certs'
+              }
+            }
+          }
+        ]
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+    depends_on:
+      - keycloak
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SERVER_ROOT_URL: http://grafana.local:3000
+      GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+      GF_AUTH_GENERIC_OAUTH_NAME: Keycloak
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: grafana
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: grafana-secret-123
+      GF_AUTH_GENERIC_OAUTH_SCOPES: openid email profile
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: http://keycloak.local:8080/realms/devplatform/protocol/openid-connect/auth
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: http://keycloak.local:8080/realms/devplatform/protocol/openid-connect/token
+      GF_AUTH_GENERIC_OAUTH_API_URL: http://keycloak.local:8080/realms/devplatform/protocol/openid-connect/userinfo
+      GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: preferred_username
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "'Admin'"
+      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+      GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+    depends_on:
+      - keycloak
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    networks:
+      default:
+        ipv4_address: 172.30.0.10
+        aliases:
+          - gitlab.local
+          - registry.gitlab.local
+    depends_on:
+      - gitlab
+    restart: unless-stopped
+
+  runner-static:
+    image: gitlab/gitlab-runner:latest
+    volumes:
+      - ./runners/static:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - nginx
+    restart: unless-stopped
+
+  runner-k8s:
+    image: gitlab/gitlab-runner:latest
+    environment:
+      KUBECONFIG: /etc/gitlab-runner/kubeconfig
+    volumes:
+      - ./runners/k8s:/etc/gitlab-runner
+    networks:
+      - default
+      - kind
+    depends_on:
+      - nginx
+    restart: unless-stopped
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.3
+    command: ["--nginx.scrape-uri=http://nginx:8081/stub_status"]
+    depends_on: [nginx]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on: [nginx-exporter]
+    restart: unless-stopped
+
+volumes:
+  gitlab-config:
+  gitlab-logs:
+  gitlab-data:
+  grafana-data:
+  prometheus-data:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1
+  kind:
+    external: true
