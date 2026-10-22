@@ -1,0 +1,326 @@
+{
+  "name": "CI Failure Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ci-failure",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e7860d49-6211-4616-970f-22df09efd78c",
+      "name": "Webhook",
+      "webhookId": "0d16b49a-85df-4096-8d6f-e7420f98b292"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "ebbf5595-be76-4ec7-8380-0339195636a4",
+              "leftValue": "={{ $json.relevant }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        448,
+        0
+      ],
+      "id": "eb9245c8-0fbc-4d2d-81ce-81b2829b8f3d",
+      "name": "Relevant branch?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body ?? $input.first().json;\n\nconst missing = ['pipeline_id', 'ref', 'status'].filter(k => b[k] === undefined);\nif (missing.length) throw new Error('Invalid payload, missing: ' + missing.join(', '));\n\nconst ref = String(b.ref);\nconst isRelease = ref.startsWith('release/');\n\nreturn [{\n  json: {\n    pipeline_id: Number(b.pipeline_id),\n    project: b.project ?? 'unknown',\n    ref,\n    status: b.status,\n    triggered_by: b.triggered_by ?? 'unknown',\n    web_url: b.web_url ?? '',\n    severity: isRelease ? 'high' : 'medium',\n    relevant: b.status === 'failed' && (ref === 'main' || isRelease),\n    received_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "580b0b02-eb2e-41ba-b113-d5d52bb465a4",
+      "name": "Normalize payload"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=  Pipeline {{ $json.pipeline_id }} on branch {{ $json.ref }} has failed. Severity: {{ $json.severity }}. Investigate and write the triage report.",
+        "options": {
+          "systemMessage": "# Skills of the CI Triage Agent\n\nYou are a CI triage assistant at ShipLoop. You help developers understand why a\nGitLab pipeline failed. Write the final report in Russian, keep identifiers,\ncommands and log fragments in English.\n\n## Skill 1: Investigation procedure (always in this order)\n1. Call `get_failed_jobs` with the pipeline_id. Note job_id, name, service and last_20_runs_failed.\n2. Call `get_job_log` for the first failed job. Find the key error line.\n3. Call `get_pipeline_commits` with the pipeline_id. Find commits that touch files related to the failure.\n4. Call `search_runbooks` with 3-6 keywords from the error line (e.g. \"pytest assertion decimal\").\n5. Call `get_service_owner` with the `service` value from step 1.\n6. Write the report. Do not call tools in a different order and do not call the same tool twice with the same arguments.\n\n## Skill 2: Classification rules\nChoose exactly one category:\n- CODE: a test, lint or compile error that points to files changed in a recent commit.\n- INFRASTRUCTURE: registry rate limits, network errors, disk space, runner problems. No relation to changed code.\n- FLAKY: the job failed in 3 or more of the last 20 runs AND the error is a timeout or selector problem, AND the commit does not obviously affect the failing test.\nIf the runbook category contradicts your own conclusion, explain why in the report.\nIf evidence is insufficient, say \"uncertain\" instead of guessing.\n\n## Skill 3: Rules and report format\n- Never invent commits, job ids, owners or runbook ids. Use only data returned by tools.\n- If a tool returns an error, mention it in the report and continue.\n- Recommend a revert only for CODE failures on main/release branches, and only if the runbook says so.\n- Never recommend reverting for INFRASTRUCTURE or FLAKY.\n- Output exactly these sections:\n\n## Что упало\n## Категория\n(CODE / INFRASTRUCTURE / FLAKY / UNCERTAIN + one sentence why)\n## Вероятная причина\n(mention the suspicious commit sha and author if it is a code issue)\n## Что делать\n(numbered steps, taken from the runbook, with its id)\n## Кому писать\n(team, on-call, slack channel)\n",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "be869bde-3251-4441-aeb1-ad586a442314",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "qwen2.5:7b",
+        "options": {
+          "temperature": 0.1,
+          "numCtx": 8192
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        672,
+        112
+      ],
+      "id": "a4fe6d5c-095c-445f-91c1-2b1b50f1692d",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "CuDbBYKosqsZMkIi",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://ci-mcp:8001/mcp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.4,
+      "position": [
+        784,
+        240
+      ],
+      "id": "78421137-13c7-477e-a0e2-adccff7681c3",
+      "name": "ci-mcp"
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $('Normalize payload').first().json;\nconst analysis = $json.output;\n\nconst md = `# Triage: pipeline ${p.pipeline_id}\n\n- Project: ${p.project}\n- Branch: ${p.ref}\n- Severity: ${p.severity}\n- Triggered by: ${p.triggered_by}\n- Received: ${p.received_at}\n- Link: ${p.web_url}\n\n---\n\n${analysis}\n\n---\n_Generated by CI Failure Triage Bot (qwen2.5:7b via Ollama)_\n`;\n\nreturn [{ json: { pipeline_id: p.pipeline_id, ref: p.ref, severity: p.severity, report: md } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "f2216310-5f77-47a3-9bb3-b7cddf52a61f",
+      "name": "Build report"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "report",
+        "options": {
+          "fileName": "triage.md"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1264,
+        -96
+      ],
+      "id": "8f7bda8f-8c8d-404a-8bdd-ee437274f00e",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/files/reports/triage-{{ $('Build report').first().json.pipeline_id }}.md",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1488,
+        -96
+      ],
+      "id": "5750fa53-a2fa-4fee-ad67-c0295477343b",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/mock-chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=  {\n    \"channel\": \"#ci-alerts\",\n    \"text\": \"CI failed: pipeline {{ $('Build report').first().json.pipeline_id }} on {{ $('Build report').first().json.ref }} (severity {{ $('Build report').first().json.severity }}). Report: reports/triage-{{ $('Build report').first().json.pipeline_id }}.md\"\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1712,
+        -96
+      ],
+      "id": "7cfb2cee-36d1-44b2-a2ad-f44d3cd61155",
+      "name": "Notify chat"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://172.18.0.2:8002/mcp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.4,
+      "position": [
+        928,
+        384
+      ],
+      "id": "2bc7a1f9-3d25-49df-9b15-9d67962a31d1",
+      "name": "runbook-mcp"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize payload": {
+      "main": [
+        [
+          {
+            "node": "Relevant branch?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Relevant branch?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ci-mcp": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Build report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build report": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Notify chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "runbook-mcp": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "221a8075-72b2-4841-a38e-9f298b48daea",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6b849efa2f662b9c40101cca9bca9b7175071c73efa7b174ec08557aea839f79"
+  },
+  "nodeGroups": [],
+  "id": "t9GjCyUbMutQ351X",
+  "tags": []
+}

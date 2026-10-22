@@ -1,0 +1,35 @@
+{
+  "name": "Mock Chat",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mock-chat",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "48e695ff-94e6-4726-b94f-b1f5a805808f",
+      "name": "Webhook",
+      "webhookId": "98e3be76-dd6f-421b-a398-0ecf9c46605b"
+    }
+  ],
+  "pinData": {},
+  "connections": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "53ee384a-8055-4819-b270-18a8de0d821a",
+  "meta": {
+    "instanceId": "6b849efa2f662b9c40101cca9bca9b7175071c73efa7b174ec08557aea839f79"
+  },
+  "nodeGroups": [],
+  "id": "suBiSHeVTNB2ea8f",
+  "tags": []
+}

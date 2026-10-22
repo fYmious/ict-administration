@@ -1,0 +1,26 @@
+groups:
+  - name: triage-bot
+    rules:
+      - alert: TriageWorkflowFailureRate
+        expr: |
+          increase(n8n_workflow_failed_total[15m])
+            / increase(n8n_workflow_started_total[15m]) > 0.2
+          and increase(n8n_workflow_started_total[15m]) > 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "more than 20% of runs triage-workflow failing"
+
+      - alert: DependencyDown
+        expr: probe_success == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.instance }} unavailable"
+
+      - alert: N8nHighMemory
+        expr: n8n_process_resident_memory_bytes > 1.5e9
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "n8n ram usage is > 1.5GB"
